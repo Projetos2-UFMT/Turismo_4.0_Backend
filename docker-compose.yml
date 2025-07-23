@@ -14,7 +14,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=admin123
     depends_on:
       - db
-    restart: unless-stopped
+    restart: "no"
 
   db:
     image: postgres:16-alpine

@@ -8,24 +8,38 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - JAVA_OPTS=
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/turismo
-      - SPRING_DATASOURCE_USERNAME=admin
-      - SPRING_DATASOURCE_PASSWORD=admin123
+      # É uma boa prática definir as variáveis de ambiente aqui,
+      # pois elas sobrescrevem as do application.properties no ambiente Docker.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/turismo
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin123
     depends_on:
-      - db
-    restart: "no"
+      # A aplicação agora esperará até que o serviço 'db' esteja 'healthy' (saudável)
+      db:
+        condition: service_healthy
+    # Recomenda-se uma política de reinício para ambientes de produção.
+    # 'unless-stopped' significa que o contêiner será reiniciado automaticamente
+    # a menos que você o pare manualmente.
+    restart: "unless-stopped" 
 
   db:
     image: postgres:16-alpine
     environment:
-      - POSTGRES_DB=turismo
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin123
+      POSTGRES_DB: turismo
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Comando para verificar se o PostgreSQL está pronto para aceitar conexões
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s       # Frequência da verificação (a cada 5 segundos)
+      timeout: 5s        # Tempo limite para o comando de teste
+      retries: 10        # Número de tentativas antes de considerar o serviço não saudável
+      start_period: 10s  # Período inicial para o serviço iniciar antes de começar as verificações
+                       # Durante este período, as falhas de healthcheck não contam para o número de retries.
 
 volumes:
   pgdata:

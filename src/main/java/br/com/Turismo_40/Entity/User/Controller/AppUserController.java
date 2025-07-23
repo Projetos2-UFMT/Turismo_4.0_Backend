@@ -44,7 +44,7 @@ public class AppUserController {
             AppUser user = userService.createUser(request.getUsername(), request.getPassword());
             
             AppUserResponse response = new AppUserResponse();
-            response.setMessage("Usuário registrado com sucesso!"); // Mensagem mais amigável
+            response.setMessage("Usuário registrado com sucesso!");
             response.setUsername(user.getUsername());
             response.setId(user.getId());
             
@@ -60,12 +60,11 @@ public class AppUserController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody AppUserLoginRequest request) {
         try {
-            // Tenta autenticar o usuário
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
             
-            // Define a autenticação no contexto de segurança (opcional para APIs stateless, mas não prejudica)
+    
             SecurityContextHolder.getContext().setAuthentication(authentication);
             
             // Obtém os detalhes do usuário autenticado

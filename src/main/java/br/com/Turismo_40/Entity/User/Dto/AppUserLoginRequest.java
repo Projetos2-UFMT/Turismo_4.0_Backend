@@ -1,22 +1,20 @@
 package br.com.Turismo_40.Entity.User.Dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class AppUserLoginRequest {
+    
+    // Nome de usuário fornecido na requisição de login
+    // Anotações @Getter e @Setter geram automaticamente os métodos getUsername e setUsername
+    @Getter @Setter
     private String username;
+    
+    // Senha fornecida na requisição de login
+    // Anotações @Getter e @Setter geram automaticamente os métodos getPassword e setPassword
+    @Getter @Setter
     private String password;
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
 }
+
+// Explicação
+// A classe AppUserLoginRequest é um DTO (Data Transfer Object) usado para encapsular os dados de login do usuário.

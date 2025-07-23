@@ -8,58 +8,46 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
+// Classe de entidade JPA que representa um usuário no banco de dados
 @Entity
+// Gera automaticamente os métodos getters para todos os campos
+@Getter
+// Gera automaticamente os métodos setters para todos os campos
+@Setter
+// Gera um construtor padrão (sem argumentos)
+@NoArgsConstructor
+// Gera um construtor com todos os campos
+@AllArgsConstructor
 public class AppUser {
 
+    // Identificador único do usuário, gerado automaticamente
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+    
+    // Nome de usuário, armazenado como uma coluna no banco
     private String username;
+    
+    // Senha do usuário, armazenada como uma coluna no banco (deve ser criptografada)
     private String password;
+    
+    // Lista de papéis (roles) do usuário, armazenada como uma coleção no banco
+    @ElementCollection
+    private List<String> roles;
 
-    @ElementCollection // Para armazenar uma lista de strings no banco
-    private List<String> roles; // Campo para armazenar os papéis
-
-    public AppUser() {
-    }
-
-    public AppUser(long id, String username, String password, List<String> roles) {
-        this.id = id;
-        this.username = username;
-        this.password = password;
-        this.roles = roles;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
+    // Obtém a lista de papéis do usuário, retornada como Optional para tratar casos nulos
     public Optional<List<String>> getRoles() {
-        return Optional.ofNullable(roles); // Retorna os papéis como Optional
-    }
-
-    public void setRoles(List<String> roles) {
-        this.roles = roles;
+        return Optional.ofNullable(roles);
     }
 }
+
+// Explicação:
+// Esta classe representa um usuário no sistema, incluindo seu ID, nome de usuário, senha e papéis.
+// É usada pelo JPA para mapear a entidade para uma tabela no banco de dados.
+// Os métodos getters e setters são gerados automaticamente pelas anotações do Lombok.
+// A lista de papéis é armazenada como uma coleção, permitindo que um usuário tenha múltiplos papéis no sistema.

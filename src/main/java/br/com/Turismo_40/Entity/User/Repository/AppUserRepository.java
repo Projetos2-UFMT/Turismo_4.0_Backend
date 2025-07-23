@@ -9,6 +9,14 @@ import br.com.Turismo_40.Entity.User.Model.AppUser;
 
 @Repository
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
+    
+    // Busca um usuário pelo nome de usuário, retornando um Optional para lidar com casos em que o usuário não existe
     Optional<AppUser> findByUsername(String username);
+    
+    // Verifica se existe um usuário com o nome de usuário fornecido
     boolean existsByUsername(String username);
 }
+
+// Explicação:
+// Esta interface estende JpaRepository, fornecendo métodos para operações CRUD básicas.
+// Pode ser implementado filros combinados com consultas personalizadas. 

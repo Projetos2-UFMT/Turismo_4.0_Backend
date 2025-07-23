@@ -8,8 +8,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class PasswordConfig {
 
+    // Define um bean do tipo PasswordEncoder para ser usado na aplicação
     @Bean
     public PasswordEncoder passwordEncoder() {
+        // Retorna uma instância de BCryptPasswordEncoder para codificação e verificação de senhas
         return new BCryptPasswordEncoder();
     }
 }
+
+// Explicação:
+// Esta classe configura o PasswordEncoder que será usado para codificar senhas de usuários.
+// O BCryptPasswordEncoder é uma implementação segura que utiliza o algoritmo BCrypt para hashing de senhas.

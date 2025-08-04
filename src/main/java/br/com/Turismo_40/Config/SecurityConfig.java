@@ -33,8 +33,8 @@ public class SecurityConfig {
         http
             .userDetailsService(userService)
             .authorizeHttpRequests(auth -> auth
-                // Rotas públicas - autenticação
-                .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                // Rotas públicas - autenticação e Swagger
+                .requestMatchers("/api/auth/register", "/api/auth/login", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 
                 // Rotas autenticadas - perfil e usuário
                 .requestMatchers("/api/auth/profile", "/api/auth/logout").authenticated()

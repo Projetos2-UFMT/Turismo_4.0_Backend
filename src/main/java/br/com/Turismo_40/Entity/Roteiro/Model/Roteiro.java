@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import br.com.Turismo_40.Entity.Notificacao.Model.Notificacao;
-import br.com.Turismo_40.Entity.RoteiroAtracaoTuristica.Model.RoteiroAtracaoTuristica;
-import br.com.Turismo_40.Entity.RoteiroEvento.Model.RoteiroEvento;
 
 @Entity
 @Table(name = "roteiro")

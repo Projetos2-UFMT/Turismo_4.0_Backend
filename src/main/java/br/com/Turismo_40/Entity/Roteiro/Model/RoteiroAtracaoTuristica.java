@@ -1,4 +1,4 @@
-package br.com.Turismo_40.Entity.RoteiroEvento.Model;
+package br.com.Turismo_40.Entity.Roteiro.Model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,12 +9,12 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "roteiro_evento")
+@Table(name = "roteiro_atracao_turistica")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RoteiroEvento {
+public class RoteiroAtracaoTuristica {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,7 +24,10 @@ public class RoteiroEvento {
     private Long roteiroId;
 
     @Column(nullable = false)
-    private Long eventoId;
+    private Long atracaoId;
+
+    @Column(nullable = false)
+    private Integer ordemSequencia;
 
     @Column(nullable = false)
     private LocalDateTime horaEstimadaVisita;

@@ -41,10 +41,12 @@ public class AtracaoTuristica {
     @Enumerated(EnumType.STRING)
     private Ambiente ambiente;
 
-    @Column(nullable = false, precision = 10, scale = 8)
+    // A anotação foi simplificada para remover precision e scale
+    @Column(nullable = false)
     private Double latitude;
 
-    @Column(nullable = false, precision = 11, scale = 8)
+    // A anotação foi simplificada para remover precision e scale
+    @Column(nullable = false)
     private Double longitude;
 
     public enum Categoria {

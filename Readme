@@ -1,0 +1,173 @@
+# API de Turismo 4.0
+
+## Visão Geral
+
+Esta API foi desenvolvida para um sistema de turismo inteligente, oferecendo funcionalidades completas para gerenciar usuários, perfis, atrações, eventos e roteiros personalizados.
+
+-----
+
+## Autenticação
+
+A API utiliza **JWT (JSON Web Tokens)** para autenticação. Para acessar os endpoints protegidos, inclua o token no header `Authorization` com o prefixo `Bearer`, como no exemplo:
+
+`Authorization: Bearer <token>`
+
+-----
+
+## Endpoints
+
+### Autenticação
+
+| Método | Endpoint | Descrição |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Registra um novo usuário. |
+| `POST` | `/api/auth/login` | Autentica um usuário e retorna o JWT. |
+| `GET` | `/api/auth/profile` | Retorna o perfil do usuário autenticado. |
+| `POST` | `/api/auth/logout` | Realiza o logout do usuário. |
+
+**Exemplo de Requisição (Login):**
+
+```json
+{
+  "username": "usuario@email.com",
+  "password": "senhaSegura123"
+}
+```
+
+**Exemplo de Resposta (Login):**
+
+```json
+{
+  "message": "Login realizado com sucesso!",
+  "username": "usuario@email.com",
+  "authenticated": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Perfil do Usuário
+
+| Método | Endpoint | Descrição |
+| :--- | :--- | :--- |
+| `POST` | `/api/perfil/criar` | Cria um perfil para o usuário autenticado. |
+| `PUT` | `/api/perfil/atualizar` | Atualiza o perfil do usuário. |
+| `GET` | `/api/perfil/meu-perfil` | Retorna o perfil do usuário autenticado. |
+
+**Valores Aceitos:**
+
+  - `estilo`: `AVENTURA`, `CULTURAL`, `RELAXANTE`, `GASTRONOMICO`, `NATUREZA`, `OUTRO`
+  - `contextoViagem`: `SOLO`, `PARCEIRO`, `FAMILIA_COM_CRIANCAS`, `FAMILIA_SEM_CRIANCAS`, `AMIGOS`
+
+### Atrações Turísticas
+
+| Método | Endpoint | Descrição |
+| :--- | :--- | :--- |
+| `POST` | `/api/atracoes/criar` | Cria uma nova atração. |
+| `GET` | `/api/atracoes/cidade/{cidade}` | Lista todas as atrações de uma cidade. |
+| `GET` | `/api/atracoes/cidade/{cidade}/categoria/{categoria}` | Lista atrações por cidade e categoria. |
+| `GET` | `/api/atracoes/{atracaoId}` | Busca uma atração específica por ID. |
+| `DELETE` | `/api/atracoes/{atracaoId}` | Remove uma atração. |
+
+**Valores Aceitos:**
+
+  - `categoria`: `AVENTURA`, `CULTURAL`, `RELAXANTE`, `GASTRONOMICO`, `NATUREZA`
+  - `ambiente`: `INTERNO`, `EXTERNO`
+
+### Eventos
+
+| Método | Endpoint | Descrição |
+| :--- | :--- | :--- |
+| `POST` | `/api/eventos/criar` | Cria um novo evento. |
+| `GET` | `/api/eventos/cidade/{cidade}` | Lista todos os eventos de uma cidade. |
+| `GET` | `/api/eventos/{eventoId}` | Busca um evento específico por ID. |
+| `DELETE` | `/api/eventos/{eventoId}` | Remove um evento. |
+
+### Roteiros Personalizados
+
+| Método | Endpoint | Descrição |
+| :--- | :--- | :--- |
+| `POST` | `/api/roteiros/criar` | Cria um novo roteiro com base nas preferências do usuário. |
+| `GET` | `/api/roteiros/meus-roteiros` | Lista todos os roteiros do usuário autenticado. |
+| `GET` | `/api/roteiros/{roteiroId}` | Busca um roteiro específico com detalhes completos. |
+| `DELETE` | `/api/roteiros/{roteiroId}` | Remove um roteiro do usuário. |
+
+**Exemplo de Requisição (Criar Roteiro):**
+
+```json
+{
+  "cidade": "Salvador",
+  "tempoDisponivel": "DOIS_DIAS",
+  "horarioPreferido": "MANHA",
+  "orcamento": 500.00,
+  "modoTransporte": "TRANSPORTE_PUBLICO",
+  "preferenciaAmbiente": "AMBOS",
+  "incluirEventosSazonais": true
+}
+```
+
+**Valores Aceitos:**
+
+  - `tempoDisponivel`: `MEIO_DIA`, `UM_DIA`, `DOIS_DIAS`, `TRES_DIAS`, `MAIS_DE_TRES_DIAS`
+  - `horarioPreferido`: `MANHA`, `TARDE`, `NOITE`
+  - `modoTransporte`: `CAMINHANDO`, `TRANSPORTE_PUBLICO`, `CARRO`, `CARONA`, `OUTRO`
+  - `preferenciaAmbiente`: `INTERNO`, `EXTERNO`, `AMBOS`
+
+-----
+
+## Códigos de Status HTTP
+
+  - `200 OK`: Requisição bem-sucedida.
+  - `201 Created`: Recurso criado com sucesso.
+  - `400 Bad Request`: Dados inválidos na requisição.
+  - `401 Unauthorized`: Token ausente ou inválido.
+  - `403 Forbidden`: Acesso negado ao recurso.
+  - `404 Not Found`: Recurso não encontrado.
+  - `500 Internal Server Error`: Erro interno do servidor.
+
+-----
+
+## Fluxo de Uso Recomendado
+
+1.  **Registrar usuário:** `POST /api/auth/register`
+2.  **Fazer login:** `POST /api/auth/login` para obter o token JWT.
+3.  **Criar perfil:** `POST /api/perfil/criar` para definir suas preferências.
+4.  **Criar roteiro:** `POST /api/roteiros/criar` para que o sistema gere sugestões.
+5.  **Visualizar roteiro:** `GET /api/roteiros/{id}` para ver as atrações e eventos sugeridos.
+
+-----
+
+## Algoritmo de Recomendação
+
+O sistema utiliza um algoritmo inteligente que considera as seguintes variáveis para gerar os roteiros:
+
+  - **Perfil do usuário:** Estilo de viagem e contexto.
+  - **Orçamento disponível:** Filtra atrações e eventos dentro do orçamento.
+  - **Tempo disponível:** Ajusta a quantidade de atividades.
+  - **Preferências de ambiente:** Prioriza locais internos ou externos.
+  - **Horário preferido:** Sugere atividades para manhã, tarde ou noite.
+  - **Modo de transporte:** Influencia a distância entre as atrações sugeridas.
+
+-----
+
+## Configuração Docker
+
+Para rodar a aplicação localmente com Docker, utilize o comando:
+
+`docker-compose up -d`
+
+A API estará disponível em `http://localhost:8080`.
+
+-----
+
+## Banco de Dados
+
+O sistema utiliza **PostgreSQL** com as seguintes tabelas principais:
+
+  - `app_user`: Usuários do sistema.
+  - `perfil_usuario`: Perfis e preferências de viagem.
+  - `atracao_turistica`: Atrações disponíveis.
+  - `evento`: Eventos sazonais.
+  - `roteiro`: Roteiros criados pelos usuários.
+  - `roteiro_atracao_turistica`: Tabela de relacionamento entre roteiros e atrações.
+  - `roteiro_evento`: Tabela de relacionamento entre roteiros e eventos.
+  - `notificacao`: Notificações do sistema.

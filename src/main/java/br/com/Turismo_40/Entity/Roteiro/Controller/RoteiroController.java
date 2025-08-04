@@ -37,14 +37,15 @@ public class RoteiroController {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();
             Optional<AppUser> userOpt = userService.findByUsername(username);
-            
+
             if (userOpt.isEmpty()) {
                 Map<String, String> error = new HashMap<>();
                 error.put("error", "Usuário não encontrado");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
             }
-
-            Roteiro roteiro = roteiroService.criarRoteiro(
+            
+            // Nova lógica: prepara o prompt para a IA
+            String promptParaIA = roteiroService.prepararPromptParaIA(
                 userOpt.get().getId(),
                 request.getCidade(),
                 request.getTempoDisponivel(),
@@ -55,14 +56,16 @@ public class RoteiroController {
                 request.getIncluirEventosSazonais()
             );
 
-            RoteiroResponse response = convertToResponse(roteiro);
-            response.setMessage("Roteiro criado com sucesso!");
+            // Resposta para demonstrar que o prompt foi gerado com sucesso
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Dados do usuário e do perfil foram coletados e o prompt foi preparado para a IA.");
+            response.put("prompt_para_ia", promptParaIA);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
 
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
-            error.put("error", "Erro ao criar roteiro: " + e.getMessage());
+            error.put("error", "Erro ao preparar roteiro: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }

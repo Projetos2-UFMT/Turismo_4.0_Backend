@@ -42,10 +42,10 @@ public class RoteiroService {
     private PerfilUsuarioService perfilService;
 
     public Roteiro criarRoteiro(Long userId, String cidade, Roteiro.TempoDisponivel tempoDisponivel,
-                               Roteiro.HorarioPreferido horarioPreferido, Double orcamento,
-                               Roteiro.ModoTransporte modoTransporte, Roteiro.PreferenciaAmbiente preferenciaAmbiente,
-                               Boolean incluirEventosSazonais) {
-        
+                                Roteiro.HorarioPreferido horarioPreferido, Double orcamento,
+                                Roteiro.ModoTransporte modoTransporte, Roteiro.PreferenciaAmbiente preferenciaAmbiente,
+                                Boolean incluirEventosSazonais) {
+        // Este método agora apenas salva o roteiro básico, sem a lógica de recomendação.
         Roteiro roteiro = new Roteiro();
         roteiro.setUserId(userId);
         roteiro.setCidade(cidade);
@@ -56,137 +56,40 @@ public class RoteiroService {
         roteiro.setPreferenciaAmbiente(preferenciaAmbiente);
         roteiro.setIncluirEventosSazonais(incluirEventosSazonais);
         roteiro.setCriadoEm(LocalDateTime.now());
-
-        Roteiro roteiroSalvo = roteiroRepository.save(roteiro);
         
-        // Gerar sugestões baseadas no perfil do usuário
-        gerarSugestoesRoteiro(roteiroSalvo);
-        
-        return roteiroSalvo;
+        return roteiroRepository.save(roteiro);
     }
-
-    private void gerarSugestoesRoteiro(Roteiro roteiro) {
-        // Buscar perfil do usuário
-        Optional<PerfilUsuario> perfilOpt = perfilService.buscarPerfilPorUserId(roteiro.getUserId());
+    
+    /**
+     * Prepara uma string (prompt) com todos os dados do usuário e do roteiro para ser usada por uma IA externa.
+     * Esta string descreve o roteiro desejado para que a IA possa gerar as sugestões.
+     */
+    public String prepararPromptParaIA(Long userId, String cidade, Roteiro.TempoDisponivel tempoDisponivel,
+                                       Roteiro.HorarioPreferido horarioPreferido, Double orcamento,
+                                       Roteiro.ModoTransporte modoTransporte, Roteiro.PreferenciaAmbiente preferenciaAmbiente,
+                                       Boolean incluirEventosSazonais) {
         
-        // Buscar atrações baseadas no orçamento e preferências
-        List<AtracaoTuristica> atracoes = atracaoService.buscarAtracoesPorOrcamento(
-            roteiro.getCidade(), 
-            roteiro.getOrcamento()
-        );
-
-        // Se o perfil existe, filtrar atrações baseadas no estilo de viagem preferido
+        Optional<PerfilUsuario> perfilOpt = perfilService.buscarPerfilPorUserId(userId);
+        
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append("Gerar um roteiro de viagem com base nas seguintes informações:\n");
+        promptBuilder.append("Cidade: ").append(cidade).append("\n");
+        promptBuilder.append("Tempo disponível: ").append(tempoDisponivel.name().toLowerCase()).append("\n");
+        promptBuilder.append("Horário preferido: ").append(horarioPreferido.name().toLowerCase()).append("\n");
+        promptBuilder.append("Orçamento: ").append(orcamento).append(" reais\n");
+        promptBuilder.append("Modo de transporte: ").append(modoTransporte.name().toLowerCase()).append("\n");
+        promptBuilder.append("Preferencia de ambiente: ").append(preferenciaAmbiente.name().toLowerCase()).append("\n");
+        promptBuilder.append("Incluir eventos sazonais: ").append(incluirEventosSazonais).append("\n");
+        
         if (perfilOpt.isPresent()) {
             PerfilUsuario perfil = perfilOpt.get();
-            AtracaoTuristica.Categoria categoriaPreferida = mapearEstiloParaCategoria(perfil.getEstilo());
-            
-            // Priorizar atrações que correspondem ao estilo do usuário
-            List<AtracaoTuristica> atracoesPreferidas = atracoes.stream()
-                .filter(a -> a.getCategoria() == categoriaPreferida)
-                .toList();
-            
-            // Se existem atrações do estilo preferido, usar essas primeiro
-            if (!atracoesPreferidas.isEmpty()) {
-                // Usar 70% de atrações preferidas e 30% de outras categorias para variedade
-                int maxAtracoes = getMaxAtracoesPorTempo(roteiro.getTempoDisponivel());
-                int atracoesPreferidas70 = (int) (maxAtracoes * 0.7);
-                int outrasAtracoes30 = maxAtracoes - atracoesPreferidas70;
-                
-                List<AtracaoTuristica> atracoesSelecionadas = new ArrayList<>();
-                atracoesSelecionadas.addAll(atracoesPreferidas.stream()
-                    .limit(atracoesPreferidas70)
-                    .toList());
-                
-                // Adicionar outras categorias para diversificar
-                List<AtracaoTuristica> outrasAtracoes = atracoes.stream()
-                    .filter(a -> a.getCategoria() != categoriaPreferida)
-                    .limit(outrasAtracoes30)
-                    .toList();
-                atracoesSelecionadas.addAll(outrasAtracoes);
-                
-                atracoes = atracoesSelecionadas;
-            }
+            promptBuilder.append("Estilo de viagem do usuário: ").append(perfil.getEstilo().name().toLowerCase()).append("\n");
+            promptBuilder.append("Contexto da viagem: ").append(perfil.getContextoViagem().name().toLowerCase()).append("\n");
+            promptBuilder.append("Interesses do usuário: ").append(perfil.getInteresses()).append("\n");
+            promptBuilder.append("Restrições do usuário: ").append(perfil.getRestricoes()).append("\n");
         }
-
-        // Filtrar por ambiente se especificado
-        if (roteiro.getPreferenciaAmbiente() != Roteiro.PreferenciaAmbiente.AMBOS) {
-            AtracaoTuristica.Ambiente ambientePref = roteiro.getPreferenciaAmbiente() == 
-                Roteiro.PreferenciaAmbiente.INTERNO ? 
-                AtracaoTuristica.Ambiente.INTERNO : 
-                AtracaoTuristica.Ambiente.EXTERNO;
-            
-            atracoes = atracoes.stream()
-                .filter(a -> a.getAmbiente() == ambientePref)
-                .toList();
-        }
-
-        // Adicionar atrações ao roteiro (limitando por tempo disponível)
-        int maxAtracoes = getMaxAtracoesPorTempo(roteiro.getTempoDisponivel());
-        LocalDateTime horaAtual = calcularHoraInicialBaseadaNoHorarioPreferido(roteiro.getHorarioPreferido());
         
-        for (int i = 0; i < Math.min(atracoes.size(), maxAtracoes); i++) {
-            RoteiroAtracaoTuristica roteiroAtracao = new RoteiroAtracaoTuristica();
-            roteiroAtracao.setRoteiroId(roteiro.getRoteiroId());
-            roteiroAtracao.setAtracaoId(atracoes.get(i).getAtracaoId());
-            roteiroAtracao.setOrdemSequencia(i + 1);
-            roteiroAtracao.setHoraEstimadaVisita(horaAtual.plusHours(i * 2));
-            
-            roteiroAtracaoRepository.save(roteiroAtracao);
-        }
-
-        // Incluir eventos se solicitado
-        if (roteiro.getIncluirEventosSazonais()) {
-            List<Evento> eventos = eventoService.buscarEventosPorOrcamento(
-                roteiro.getCidade(), 
-                roteiro.getOrcamento()
-            );
-            
-            for (Evento evento : eventos) {
-                RoteiroEvento roteiroEvento = new RoteiroEvento();
-                roteiroEvento.setRoteiroId(roteiro.getRoteiroId());
-                roteiroEvento.setEventoId(evento.getEventoId());
-                roteiroEvento.setHoraEstimadaVisita(evento.getHoraInicio());
-                
-                roteiroEventoRepository.save(roteiroEvento);
-            }
-        }
-    }
-    
-    /**
-     * Mapeia o estilo de viagem do perfil do usuário para uma categoria de atração correspondente
-     */
-    private AtracaoTuristica.Categoria mapearEstiloParaCategoria(PerfilUsuario.Estilo estilo) {
-        return switch (estilo) {
-            case AVENTURA -> AtracaoTuristica.Categoria.AVENTURA;
-            case CULTURAL -> AtracaoTuristica.Categoria.CULTURAL;
-            case RELAXANTE -> AtracaoTuristica.Categoria.RELAXANTE;
-            case GASTRONOMICO -> AtracaoTuristica.Categoria.GASTRONOMICO;
-            case NATUREZA -> AtracaoTuristica.Categoria.NATUREZA;
-            case OUTRO -> AtracaoTuristica.Categoria.CULTURAL; // Default para "outro"
-        };
-    }
-    
-    /**
-     * Calcula a hora inicial do roteiro baseada na preferência de horário do usuário
-     */
-    private LocalDateTime calcularHoraInicialBaseadaNoHorarioPreferido(Roteiro.HorarioPreferido horarioPreferido) {
-        LocalDateTime hoje = LocalDateTime.now().toLocalDate().atStartOfDay();
-        
-        return switch (horarioPreferido) {
-            case MANHA -> hoje.withHour(9);   // 09:00
-            case TARDE -> hoje.withHour(14);  // 14:00
-            case NOITE -> hoje.withHour(19);  // 19:00
-        };
-    }
-
-    private int getMaxAtracoesPorTempo(Roteiro.TempoDisponivel tempo) {
-        return switch (tempo) {
-            case MEIO_DIA -> 2;
-            case UM_DIA -> 4;
-            case DOIS_DIAS -> 8;
-            case TRES_DIAS -> 12;
-            case MAIS_DE_TRES_DIAS -> 20;
-        };
+        return promptBuilder.toString();
     }
 
     public List<Roteiro> listarRoteirosPorUsuario(Long userId) {

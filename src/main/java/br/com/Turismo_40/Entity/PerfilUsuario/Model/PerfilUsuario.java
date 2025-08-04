@@ -16,7 +16,10 @@ public class PerfilUsuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
+    private Long id; // Chave primária auto-gerada para o perfil
+
+    @Column(nullable = false, unique = true) // Garante que cada usuário tenha apenas um perfil
+    private Long userId; // Chave estrangeira para o usuário
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)

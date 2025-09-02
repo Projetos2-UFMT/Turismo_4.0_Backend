@@ -1,7 +1,5 @@
 package br.com.Turismo_40.Entity.Roteiro.Controller;
 
-import br.com.Turismo_40.Entity.AtracaoTuristica.Model.AtracaoTuristica;
-import br.com.Turismo_40.Entity.Evento.Model.Evento;
 import br.com.Turismo_40.Entity.Roteiro.Dto.RoteiroRequest;
 import br.com.Turismo_40.Entity.Roteiro.Dto.RoteiroResponse;
 import br.com.Turismo_40.Entity.Roteiro.Model.Roteiro;
@@ -97,46 +95,6 @@ public class RoteiroController {
         }
     }
 
-    @GetMapping("/{roteiroId}")
-    public ResponseEntity<?> buscarRoteiroPorId(@PathVariable Long roteiroId) {
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String username = auth.getName();
-            Optional<AppUser> userOpt = userService.findByUsername(username);
-            
-            if (userOpt.isEmpty()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("error", "Usuário não encontrado");
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-            }
-
-            Optional<Roteiro> roteiroOpt = roteiroService.buscarRoteiroPorId(roteiroId);
-            
-            if (roteiroOpt.isEmpty()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("error", "Roteiro não encontrado");
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-            }
-
-            Roteiro roteiro = roteiroOpt.get();
-            
-            // Verificar se o roteiro pertence ao usuário autenticado
-            if (!roteiro.getUserId().equals(userOpt.get().getId())) {
-                Map<String, String> error = new HashMap<>();
-                error.put("error", "Acesso negado");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
-            }
-
-            RoteiroResponse response = convertToResponseWithDetails(roteiro);
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Erro ao buscar roteiro: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-        }
-    }
-
     @DeleteMapping("/{roteiroId}")
     public ResponseEntity<?> deletarRoteiro(@PathVariable Long roteiroId) {
         try {
@@ -191,19 +149,6 @@ public class RoteiroController {
         response.setPreferenciaAmbiente(roteiro.getPreferenciaAmbiente());
         response.setIncluirEventosSazonais(roteiro.getIncluirEventosSazonais());
         response.setCriadoEm(roteiro.getCriadoEm());
-        return response;
-    }
-
-    private RoteiroResponse convertToResponseWithDetails(Roteiro roteiro) {
-        RoteiroResponse response = convertToResponse(roteiro);
-        
-        // Buscar atrações e eventos do roteiro
-        List<AtracaoTuristica> atracoes = roteiroService.buscarAtracoesDoRoteiro(roteiro.getRoteiroId());
-        List<Evento> eventos = roteiroService.buscarEventosDoRoteiro(roteiro.getRoteiroId());
-        
-        response.setAtracoes(atracoes);
-        response.setEventos(eventos);
-        
         return response;
     }
 }

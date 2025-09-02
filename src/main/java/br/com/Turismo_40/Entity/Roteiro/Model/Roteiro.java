@@ -9,7 +9,6 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import br.com.Turismo_40.Entity.Notificacao.Model.Notificacao;
 
 @Entity
 @Table(name = "roteiro")
@@ -59,9 +58,6 @@ public class Roteiro {
 
     @OneToMany(mappedBy = "roteiroId", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<RoteiroEvento> eventos;
-
-    @OneToMany(mappedBy = "roteiroId", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Notificacao> notificacoes;
 
     public enum TempoDisponivel {
         MEIO_DIA, UM_DIA, DOIS_DIAS, TRES_DIAS, MAIS_DE_TRES_DIAS

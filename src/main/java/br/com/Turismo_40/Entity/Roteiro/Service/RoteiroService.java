@@ -1,22 +1,13 @@
 package br.com.Turismo_40.Entity.Roteiro.Service;
 
-import br.com.Turismo_40.Entity.AtracaoTuristica.Model.AtracaoTuristica;
-import br.com.Turismo_40.Entity.AtracaoTuristica.Service.AtracaoTuristicaService;
-import br.com.Turismo_40.Entity.Evento.Model.Evento;
-import br.com.Turismo_40.Entity.Evento.Service.EventoService;
 import br.com.Turismo_40.Entity.PerfilUsuario.Model.PerfilUsuario;
 import br.com.Turismo_40.Entity.PerfilUsuario.Service.PerfilUsuarioService;
 import br.com.Turismo_40.Entity.Roteiro.Model.Roteiro;
-import br.com.Turismo_40.Entity.Roteiro.Model.RoteiroAtracaoTuristica;
-import br.com.Turismo_40.Entity.Roteiro.Model.RoteiroEvento;
 import br.com.Turismo_40.Entity.Roteiro.Repository.RoteiroRepository;
-import br.com.Turismo_40.Entity.Roteiro.Repository.RoteiroAtracaoTuristicaRepository;
-import br.com.Turismo_40.Entity.Roteiro.Repository.RoteiroEventoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,18 +16,6 @@ public class RoteiroService {
 
     @Autowired
     private RoteiroRepository roteiroRepository;
-
-    @Autowired
-    private RoteiroAtracaoTuristicaRepository roteiroAtracaoRepository;
-
-    @Autowired
-    private RoteiroEventoRepository roteiroEventoRepository;
-
-    @Autowired
-    private AtracaoTuristicaService atracaoService;
-
-    @Autowired
-    private EventoService eventoService;
 
     @Autowired
     private PerfilUsuarioService perfilService;
@@ -98,31 +77,6 @@ public class RoteiroService {
 
     public Optional<Roteiro> buscarRoteiroPorId(Long roteiroId) {
         return roteiroRepository.findById(roteiroId);
-    }
-
-    public List<AtracaoTuristica> buscarAtracoesDoRoteiro(Long roteiroId) {
-        List<RoteiroAtracaoTuristica> roteiroAtracoes = roteiroAtracaoRepository
-            .findByRoteiroIdOrderByOrdemSequencia(roteiroId);
-        
-        List<AtracaoTuristica> atracoes = new ArrayList<>();
-        for (RoteiroAtracaoTuristica ra : roteiroAtracoes) {
-            Optional<AtracaoTuristica> atracao = atracaoService.buscarAtracaoPorId(ra.getAtracaoId());
-            atracao.ifPresent(atracoes::add);
-        }
-        
-        return atracoes;
-    }
-
-    public List<Evento> buscarEventosDoRoteiro(Long roteiroId) {
-        List<RoteiroEvento> roteiroEventos = roteiroEventoRepository.findByRoteiroId(roteiroId);
-        
-        List<Evento> eventos = new ArrayList<>();
-        for (RoteiroEvento re : roteiroEventos) {
-            Optional<Evento> evento = eventoService.buscarEventoPorId(re.getEventoId());
-            evento.ifPresent(eventos::add);
-        }
-        
-        return eventos;
     }
 
     public void deletarRoteiro(Long roteiroId) {

@@ -2,7 +2,9 @@ package br.com.Turismo_40.Entity.Roteiro.Service;
 
 import br.com.Turismo_40.Entity.PerfilUsuario.Model.PerfilUsuario;
 import br.com.Turismo_40.Entity.PerfilUsuario.Service.PerfilUsuarioService;
+import br.com.Turismo_40.Entity.Roteiro.Model.Lugar;
 import br.com.Turismo_40.Entity.Roteiro.Model.Roteiro;
+import br.com.Turismo_40.Entity.Roteiro.Repository.LugarRepository;
 import br.com.Turismo_40.Entity.Roteiro.Repository.RoteiroRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,13 +20,16 @@ public class RoteiroService {
     private RoteiroRepository roteiroRepository;
 
     @Autowired
-    private PerfilUsuarioService perfilService;
+    private LugarRepository lugarRepository;
 
+    @Autowired
+    private PerfilUsuarioService perfilService;
+    
+    // Método original para criação de roteiro
     public Roteiro criarRoteiro(Long userId, String cidade, Roteiro.TempoDisponivel tempoDisponivel,
                                 Roteiro.HorarioPreferido horarioPreferido, Double orcamento,
                                 Roteiro.ModoTransporte modoTransporte, Roteiro.PreferenciaAmbiente preferenciaAmbiente,
                                 Boolean incluirEventosSazonais) {
-        // Este método agora apenas salva o roteiro básico, sem a lógica de recomendação.
         Roteiro roteiro = new Roteiro();
         roteiro.setUserId(userId);
         roteiro.setCidade(cidade);
@@ -40,16 +45,13 @@ public class RoteiroService {
     }
     
     /**
-     * Prepara uma string (prompt) com todos os dados do usuário e do roteiro para ser usada por uma IA externa.
-     * Esta string descreve o roteiro desejado para que a IA possa gerar as sugestões.
+     * Prepara a string (prompt) para a IA.
      */
     public String prepararPromptParaIA(Long userId, String cidade, Roteiro.TempoDisponivel tempoDisponivel,
                                        Roteiro.HorarioPreferido horarioPreferido, Double orcamento,
                                        Roteiro.ModoTransporte modoTransporte, Roteiro.PreferenciaAmbiente preferenciaAmbiente,
                                        Boolean incluirEventosSazonais) {
-        
         Optional<PerfilUsuario> perfilOpt = perfilService.buscarPerfilPorUserId(userId);
-        
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append("Gerar um roteiro de viagem com base nas seguintes informações:\n");
         promptBuilder.append("Cidade: ").append(cidade).append("\n");
@@ -59,7 +61,6 @@ public class RoteiroService {
         promptBuilder.append("Modo de transporte: ").append(modoTransporte.name().toLowerCase()).append("\n");
         promptBuilder.append("Preferencia de ambiente: ").append(preferenciaAmbiente.name().toLowerCase()).append("\n");
         promptBuilder.append("Incluir eventos sazonais: ").append(incluirEventosSazonais).append("\n");
-        
         if (perfilOpt.isPresent()) {
             PerfilUsuario perfil = perfilOpt.get();
             promptBuilder.append("Estilo de viagem do usuário: ").append(perfil.getEstilo().name().toLowerCase()).append("\n");
@@ -67,7 +68,6 @@ public class RoteiroService {
             promptBuilder.append("Interesses do usuário: ").append(perfil.getInteresses()).append("\n");
             promptBuilder.append("Restrições do usuário: ").append(perfil.getRestricoes()).append("\n");
         }
-        
         return promptBuilder.toString();
     }
 
@@ -81,5 +81,12 @@ public class RoteiroService {
 
     public void deletarRoteiro(Long roteiroId) {
         roteiroRepository.deleteById(roteiroId);
+    }
+
+    /**
+     * Busca os lugares disponíveis no banco de dados para a cidade informada.
+     */
+    public List<Lugar> buscarLugaresPorCidade(String cidade) {
+        return lugarRepository.findByCidade(cidade);
     }
 }

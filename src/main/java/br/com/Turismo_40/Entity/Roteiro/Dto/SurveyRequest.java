@@ -9,7 +9,7 @@ import java.util.List;
 @Setter
 public class SurveyRequest {
     
-    // Dados do roteiro que o back-end precisa
+    // Dados do roteiro
     private String cidade;
     private Roteiro.TempoDisponivel tempoDisponivel;
     private Roteiro.HorarioPreferido horarioPreferido;
@@ -17,7 +17,7 @@ public class SurveyRequest {
     private Roteiro.ModoTransporte modoTransporte;
     private Boolean incluirEventosSazonais;
 
-    // A lista de respostas da pesquisa, como já estava
+    // A lista de respostas da pesquisa
     private List<QuestionResponse> respostas;
 
     @Getter

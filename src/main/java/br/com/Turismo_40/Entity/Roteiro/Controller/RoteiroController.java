@@ -5,6 +5,7 @@ import br.com.Turismo_40.Entity.PerfilUsuario.Model.PerfilUsuario;
 import br.com.Turismo_40.Entity.PerfilUsuario.Service.PerfilUsuarioService;
 import br.com.Turismo_40.Entity.Roteiro.Dto.RoteiroRequest;
 import br.com.Turismo_40.Entity.Roteiro.Dto.RoteiroResponse;
+import br.com.Turismo_40.Entity.Roteiro.Dto.SurveyRequest;
 import br.com.Turismo_40.Entity.Roteiro.Model.Roteiro;
 import br.com.Turismo_40.Entity.Roteiro.Service.RoteiroService;
 import br.com.Turismo_40.Entity.User.Model.AppUser;
@@ -94,7 +95,6 @@ public class RoteiroController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
             }
 
-            // A lógica de criação de roteiro original que prepara o prompt para a IA
             String promptParaIA = roteiroService.prepararPromptParaIA(
                     userOpt.get().getId(),
                     request.getCidade(),
@@ -120,7 +120,7 @@ public class RoteiroController {
     }
 
     @PostMapping("/gerar-roteiro-por-pesquisa")
-    public ResponseEntity<?> gerarRoteiroPorPesquisa(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> gerarRoteiroPorPesquisa(@RequestBody SurveyRequest request) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();
@@ -132,22 +132,27 @@ public class RoteiroController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
             }
 
-            // Mapeia as respostas da pesquisa para os DTOs existentes
             PerfilUsuarioRequest perfilRequest = new PerfilUsuarioRequest();
-            RoteiroRequest roteiroRequest = new RoteiroRequest();
 
-            processarRespostasPesquisa((List<Map<String, String>>) request.get("respostas"), perfilRequest, roteiroRequest);
+            for (SurveyRequest.QuestionResponse qr : request.getRespostas()) {
+                String pergunta = qr.getPergunta();
+                String resposta = qr.getResposta();
 
-            // Dados adicionais do roteiro
-            Map<String, Object> roteiroMap = (Map<String, Object>) request.get("roteiro");
-            roteiroRequest.setCidade((String) roteiroMap.get("cidade"));
-            roteiroRequest.setTempoDisponivel(Roteiro.TempoDisponivel.valueOf((String) roteiroMap.get("tempoDisponivel")));
-            roteiroRequest.setHorarioPreferido(Roteiro.HorarioPreferido.valueOf((String) roteiroMap.get("horarioPreferido")));
-            roteiroRequest.setOrcamento(Double.valueOf(roteiroMap.get("orcamento").toString()));
-            roteiroRequest.setModoTransporte(Roteiro.ModoTransporte.valueOf((String) roteiroMap.get("modoTransporte")));
-            roteiroRequest.setIncluirEventosSazonais((Boolean) roteiroMap.get("incluirEventosSazonais"));
+                if (pergunta != null && resposta != null) {
+                    if (pergunta.contains("tipo preferido de comida")) {
+                        perfilRequest.setEstilo(mapComidaToEstilo(resposta));
+                    } else if (pergunta.contains("saídas culturais")) {
+                        perfilRequest.setInteresses(resposta);
+                    } else if (pergunta.contains("mais interessante")) {
+                        perfilRequest.setEstilo(mapInteresseToEstilo(resposta));
+                    } else if (pergunta.contains("Tem filhos")) {
+                        perfilRequest.setContextoViagem(mapFilhosToContexto(resposta));
+                    } else if (pergunta.contains("pode comer carne")) {
+                        perfilRequest.setRestricoes(resposta);
+                    }
+                }
+            }
             
-            // Salva ou atualiza o perfil do usuário
             perfilService.buscarPerfilPorUserId(userOpt.get().getId()).ifPresentOrElse(
                     perfil -> perfilService.atualizarPerfil(userOpt.get().getId(), perfilRequest.getEstilo(), perfilRequest.getContextoViagem(), perfilRequest.getInteresses(), perfilRequest.getRestricoes()),
                     () -> perfilService.criarPerfil(userOpt.get().getId(), perfilRequest.getEstilo(), perfilRequest.getContextoViagem(), perfilRequest.getInteresses(), perfilRequest.getRestricoes())
@@ -156,7 +161,7 @@ public class RoteiroController {
             // Objeto para enviar para a API de recomendação
             Map<String, Object> recommendationPayload = new HashMap<>();
             recommendationPayload.put("perfil_usuario", perfilService.buscarPerfilPorUserId(userOpt.get().getId()).get());
-            recommendationPayload.put("roteiro_request", roteiroRequest);
+            recommendationPayload.put("roteiro_request", request);
 
             // Chama a API de recomendação externa
             RestTemplate restTemplate = new RestTemplate();
@@ -168,19 +173,19 @@ public class RoteiroController {
 
             if (recommendationResponse.getStatusCode() != HttpStatus.OK) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    Map.of("error", "Erro ao chamar o motor de recomendação externo.")
+                        Map.of("error", "Erro ao chamar o motor de recomendação externo.")
                 );
             }
 
-            // Processa a resposta do motor de recomendação
             Map<String, Object> responseBody = recommendationResponse.getBody();
-            // Aqui você receberia o itinerário da API Python, que você pode salvar no seu banco
-            // roteiroService.salvarItinerario((List<Map<String, String>>) responseBody.get("itinerario"));
 
-            // Exemplo de resposta para o front-end
+            // Salva o roteiro retornado no banco de dados e retorna a resposta
+            // Você precisará de um método no seu RoteiroService para salvar o itinerário
+            // Roteiro novoRoteiro = roteiroService.salvarItinerarioDoPython(responseBody);
+            
             Map<String, Object> successResponse = new HashMap<>();
             successResponse.put("message", "Itinerário gerado com sucesso.");
-            successResponse.put("itinerario_sugerido", responseBody.get("itinerario")); // O itinerário retornado pela API Python
+            successResponse.put("itinerario_sugerido", responseBody.get("itinerario"));
 
             return ResponseEntity.status(HttpStatus.OK).body(successResponse);
 
@@ -190,30 +195,7 @@ public class RoteiroController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
-
-    private void processarRespostasPesquisa(List<Map<String, String>> respostas, PerfilUsuarioRequest perfilRequest, RoteiroRequest roteiroRequest) {
-        for (Map<String, String> qr : respostas) {
-            String pergunta = qr.get("pergunta");
-            String resposta = qr.get("resposta");
-
-            if (pergunta != null && resposta != null) {
-                if (pergunta.contains("tipo preferido de comida")) {
-                    perfilRequest.setEstilo(mapComidaToEstilo(resposta));
-                } else if (pergunta.contains("saídas culturais")) {
-                    perfilRequest.setInteresses(resposta);
-                } else if (pergunta.contains("mais interessante")) {
-                    perfilRequest.setEstilo(mapInteresseToEstilo(resposta));
-                } else if (pergunta.contains("Tem filhos")) {
-                    perfilRequest.setContextoViagem(mapFilhosToContexto(resposta));
-                } else if (pergunta.contains("pode comer carne")) {
-                    perfilRequest.setRestricoes(resposta);
-                } else if (pergunta.contains("ambiente você prefere")) {
-                    roteiroRequest.setPreferenciaAmbiente(mapPreferenciaAmbiente(resposta));
-                }
-            }
-        }
-    }
-
+    
     @GetMapping("/meus-roteiros")
     public ResponseEntity<?> listarMeusRoteiros() {
         try {
@@ -264,7 +246,6 @@ public class RoteiroController {
 
             Roteiro roteiro = roteiroOpt.get();
 
-            // Verificar se o roteiro pertence ao usuário autenticado
             if (!roteiro.getUserId().equals(userOpt.get().getId())) {
                 Map<String, String> error = new HashMap<>();
                 error.put("error", "Acesso negado");

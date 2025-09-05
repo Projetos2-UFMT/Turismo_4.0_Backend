@@ -1,7 +1,5 @@
 package br.com.Turismo_40.Entity.Roteiro.Service;
 
-import br.com.Turismo_40.Entity.PerfilUsuario.Model.PerfilUsuario;
-import br.com.Turismo_40.Entity.PerfilUsuario.Service.PerfilUsuarioService;
 import br.com.Turismo_40.Entity.Roteiro.Model.Lugar;
 import br.com.Turismo_40.Entity.Roteiro.Model.Roteiro;
 import br.com.Turismo_40.Entity.Roteiro.Repository.LugarRepository;
@@ -22,9 +20,6 @@ public class RoteiroService {
     @Autowired
     private LugarRepository lugarRepository;
 
-    @Autowired
-    private PerfilUsuarioService perfilService;
-    
     // Método original para criação de roteiro
     public Roteiro criarRoteiro(Long userId, String cidade, Roteiro.TempoDisponivel tempoDisponivel,
                                 Roteiro.HorarioPreferido horarioPreferido, Double orcamento,
@@ -51,7 +46,6 @@ public class RoteiroService {
                                        Roteiro.HorarioPreferido horarioPreferido, Double orcamento,
                                        Roteiro.ModoTransporte modoTransporte, Roteiro.PreferenciaAmbiente preferenciaAmbiente,
                                        Boolean incluirEventosSazonais) {
-        Optional<PerfilUsuario> perfilOpt = perfilService.buscarPerfilPorUserId(userId);
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append("Gerar um roteiro de viagem com base nas seguintes informações:\n");
         promptBuilder.append("Cidade: ").append(cidade).append("\n");
@@ -61,13 +55,7 @@ public class RoteiroService {
         promptBuilder.append("Modo de transporte: ").append(modoTransporte.name().toLowerCase()).append("\n");
         promptBuilder.append("Preferencia de ambiente: ").append(preferenciaAmbiente.name().toLowerCase()).append("\n");
         promptBuilder.append("Incluir eventos sazonais: ").append(incluirEventosSazonais).append("\n");
-        if (perfilOpt.isPresent()) {
-            PerfilUsuario perfil = perfilOpt.get();
-            promptBuilder.append("Estilo de viagem do usuário: ").append(perfil.getEstilo().name().toLowerCase()).append("\n");
-            promptBuilder.append("Contexto da viagem: ").append(perfil.getContextoViagem().name().toLowerCase()).append("\n");
-            promptBuilder.append("Interesses do usuário: ").append(perfil.getInteresses()).append("\n");
-            promptBuilder.append("Restrições do usuário: ").append(perfil.getRestricoes()).append("\n");
-        }
+
         return promptBuilder.toString();
     }
 

@@ -1,8 +1,5 @@
 package br.com.Turismo_40.Entity.Roteiro.Controller;
 
-import br.com.Turismo_40.Entity.PerfilUsuario.Dto.PerfilUsuarioRequest;
-import br.com.Turismo_40.Entity.PerfilUsuario.Model.PerfilUsuario;
-import br.com.Turismo_40.Entity.PerfilUsuario.Service.PerfilUsuarioService;
 import br.com.Turismo_40.Entity.Roteiro.Dto.RoteiroRequest;
 import br.com.Turismo_40.Entity.Roteiro.Dto.RoteiroResponse;
 import br.com.Turismo_40.Entity.Roteiro.Dto.SurveyRequest;
@@ -34,53 +31,8 @@ public class RoteiroController {
     @Autowired
     private AppUserService userService;
 
-    @Autowired
-    private PerfilUsuarioService perfilService;
-    
     // URL da sua API de recomendação em Python
     private static final String RECOMMENDATION_API_URL = "http://localhost:5000/api/generate-itinerary";
-
-    // Mapeamento de respostas da pesquisa para enums do PerfilUsuario
-    private PerfilUsuario.Estilo mapComidaToEstilo(String resposta) {
-        if ("Brasileira".equalsIgnoreCase(resposta) || "Churrasco".equalsIgnoreCase(resposta) || "Japonesa".equalsIgnoreCase(resposta) || "Italiana".equalsIgnoreCase(resposta) || "Vegana".equalsIgnoreCase(resposta)) {
-            return PerfilUsuario.Estilo.GASTRONOMICO;
-        }
-        return PerfilUsuario.Estilo.OUTRO;
-    }
-
-    private PerfilUsuario.Estilo mapInteresseToEstilo(String resposta) {
-        switch (resposta.toLowerCase()) {
-            case "cultura":
-            case "história":
-            case "shows culturais":
-                return PerfilUsuario.Estilo.CULTURAL;
-            case "natureza":
-                return PerfilUsuario.Estilo.NATUREZA;
-            case "esporte":
-                return PerfilUsuario.Estilo.AVENTURA;
-            case "gastronomia":
-                return PerfilUsuario.Estilo.GASTRONOMICO;
-            default:
-                return PerfilUsuario.Estilo.OUTRO;
-        }
-    }
-
-    private PerfilUsuario.ContextoViagem mapFilhosToContexto(String resposta) {
-        if ("Não".equalsIgnoreCase(resposta)) {
-            return PerfilUsuario.ContextoViagem.SOLO;
-        } else {
-            return PerfilUsuario.ContextoViagem.FAMILIA_COM_CRIANCAS;
-        }
-    }
-
-    private Roteiro.PreferenciaAmbiente mapPreferenciaAmbiente(String resposta) {
-        if ("Natureza".equalsIgnoreCase(resposta)) {
-            return Roteiro.PreferenciaAmbiente.EXTERNO;
-        } else if ("Urbano".equalsIgnoreCase(resposta) || "Histórico".equalsIgnoreCase(resposta) || "Cultural".equalsIgnoreCase(resposta) || "Diversificado".equalsIgnoreCase(resposta)) {
-            return Roteiro.PreferenciaAmbiente.AMBOS;
-        }
-        return Roteiro.PreferenciaAmbiente.AMBOS;
-    }
 
     @PostMapping("/criar")
     public ResponseEntity<?> criarRoteiro(@RequestBody RoteiroRequest request) {
@@ -95,6 +47,8 @@ public class RoteiroController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
             }
 
+            // A lógica de preparar o prompt para a IA foi movida para o RoteiroService,
+            // e já não depende do perfil do usuário.
             String promptParaIA = roteiroService.prepararPromptParaIA(
                     userOpt.get().getId(),
                     request.getCidade(),
@@ -107,7 +61,7 @@ public class RoteiroController {
             );
 
             Map<String, String> response = new HashMap<>();
-            response.put("message", "Dados do usuário e do perfil foram coletados e o prompt foi preparado para a IA.");
+            response.put("message", "Dados do usuário e do roteiro foram coletados e o prompt foi preparado para a IA.");
             response.put("prompt_para_ia", promptParaIA);
 
             return ResponseEntity.status(HttpStatus.OK).body(response);
@@ -132,38 +86,10 @@ public class RoteiroController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
             }
 
-            PerfilUsuarioRequest perfilRequest = new PerfilUsuarioRequest();
-
-            for (SurveyRequest.QuestionResponse qr : request.getRespostas()) {
-                String pergunta = qr.getPergunta();
-                String resposta = qr.getResposta();
-
-                if (pergunta != null && resposta != null) {
-                    if (pergunta.contains("tipo preferido de comida")) {
-                        perfilRequest.setEstilo(mapComidaToEstilo(resposta));
-                    } else if (pergunta.contains("saídas culturais")) {
-                        perfilRequest.setInteresses(resposta);
-                    } else if (pergunta.contains("mais interessante")) {
-                        perfilRequest.setEstilo(mapInteresseToEstilo(resposta));
-                    } else if (pergunta.contains("Tem filhos")) {
-                        perfilRequest.setContextoViagem(mapFilhosToContexto(resposta));
-                    } else if (pergunta.contains("pode comer carne")) {
-                        perfilRequest.setRestricoes(resposta);
-                    }
-                }
-            }
-            
-            perfilService.buscarPerfilPorUserId(userOpt.get().getId()).ifPresentOrElse(
-                    perfil -> perfilService.atualizarPerfil(userOpt.get().getId(), perfilRequest.getEstilo(), perfilRequest.getContextoViagem(), perfilRequest.getInteresses(), perfilRequest.getRestricoes()),
-                    () -> perfilService.criarPerfil(userOpt.get().getId(), perfilRequest.getEstilo(), perfilRequest.getContextoViagem(), perfilRequest.getInteresses(), perfilRequest.getRestricoes())
-            );
-
-            // Objeto para enviar para a API de recomendação
+            // Envia a requisição de pesquisa diretamente para a API de recomendação
             Map<String, Object> recommendationPayload = new HashMap<>();
-            recommendationPayload.put("perfil_usuario", perfilService.buscarPerfilPorUserId(userOpt.get().getId()).get());
             recommendationPayload.put("roteiro_request", request);
 
-            // Chama a API de recomendação externa
             RestTemplate restTemplate = new RestTemplate();
             ResponseEntity<Map> recommendationResponse = restTemplate.postForEntity(
                     RECOMMENDATION_API_URL,

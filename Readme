@@ -18,7 +18,7 @@ Este sistema processa questionários de usuários, aplica filtros inteligentes e
 
 ### Tabelas Principais
 
-- **locais**: Armazena informações dos locais turísticos
+**locais**: Armazena informações dos locais turísticos
 - **local_tags**: Tags de cada local (cultura, natureza, etc.)
 - **itinerarios**: Itinerários gerados para os usuários
 - **itens_itinerario**: Itens individuais de cada itinerário
@@ -28,7 +28,7 @@ Este sistema processa questionários de usuários, aplica filtros inteligentes e
 
 ### 1. Registro e Login
 
-```bash
+bash
 # Registrar usuário
 POST /api/auth/register
 {
@@ -117,7 +117,7 @@ POST /api/questionario/processar
 
 ### 3. Gerenciar Itinerários
 
-```bash
+bash
 # Listar itinerários de um usuário
 GET /api/itinerarios/usuario/1
 
@@ -129,11 +129,10 @@ PUT /api/itinerarios/item/1/marcar-visitado
 
 # Obter estatísticas
 GET /api/itinerarios/estatisticas
-```
 
 ### 4. Explorar Locais
 
-```bash
+bash
 # Listar todos os locais
 GET /api/locais
 

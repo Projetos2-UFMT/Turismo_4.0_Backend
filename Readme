@@ -1,173 +1,301 @@
-# API de Turismo 4.0
+# Sistema de Recomendações de Turismo 4.0
 
 ## Visão Geral
 
-Esta API foi desenvolvida para um sistema de turismo inteligente, oferecendo funcionalidades completas para gerenciar usuários, perfis, atrações, eventos e roteiros personalizados.
+Este sistema processa questionários de usuários, aplica filtros inteligentes e gera recomendações personalizadas de locais turísticos em Cuiabá, criando itinerários completos salvos no banco de dados.
 
------
+## Fluxo do Sistema
 
-## Autenticação
+1. **Frontend** envia questionário com respostas do usuário
+2. **Backend** processa respostas e cria perfil do usuário
+3. **Sistema** aplica filtros inteligentes (ex: tem filhos = evita bares noturnos)
+4. **Sistema** filtra locais por tags de preferência
+5. **Sistema** envia dados para algoritmo de recomendação (simulado)
+6. **Sistema** cria itinerário completo no banco de dados
+7. **Sistema** retorna recomendações e ID do itinerário
 
-A API utiliza **JWT (JSON Web Tokens)** para autenticação. Para acessar os endpoints protegidos, inclua o token no header `Authorization` com o prefixo `Bearer`, como no exemplo:
+## Estrutura do Banco de Dados
 
-`Authorization: Bearer <token>`
+### Tabelas Principais
 
------
+- **locais**: Armazena informações dos locais turísticos
+- **local_tags**: Tags de cada local (cultura, natureza, etc.)
+- **itinerarios**: Itinerários gerados para os usuários
+- **itens_itinerario**: Itens individuais de cada itinerário
+- **users**: Usuários do sistema
 
-## Endpoints
+## Como Usar
 
-### Autenticação
+### 1. Registro e Login
 
-| Método | Endpoint | Descrição |
-| :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Registra um novo usuário. |
-| `POST` | `/api/auth/login` | Autentica um usuário e retorna o JWT. |
-| `GET` | `/api/auth/profile` | Retorna o perfil do usuário autenticado. |
-| `POST` | `/api/auth/logout` | Realiza o logout do usuário. |
+```bash
+# Registrar usuário
+POST /api/auth/register
+{
+    "username": "joao",
+    "password": "123456"
+}
 
-**Exemplo de Requisição (Login):**
+# Fazer login
+POST /api/auth/login
+{
+    "username": "joao", 
+    "password": "123456"
+}
+# Retorna token JWT para usar nos outros endpoints
+```
 
+### 2. Processar Questionário
+
+```bash
+POST /api/questionario/processar
+```
+
+**Exemplo de JSON de entrada:**
 ```json
 {
-  "username": "usuario@email.com",
-  "password": "senhaSegura123"
+    "usuarioId": 1,
+    "respostas": [
+        {
+            "pergunta": "Questão 1: Qual seu tipo preferido de comida?",
+            "respostaSelecionada": "Churrasco"
+        },
+        {
+            "pergunta": "Questão 2: Qual evento você prefere?",
+            "respostaSelecionada": "Shopping"
+        },
+        {
+            "pergunta": "Questão 3: Você gosta de saídas culturais?",
+            "respostaSelecionada": "Museu"
+        },
+        {
+            "pergunta": "Questão 4: Qual você acha mais interessante?",
+            "respostaSelecionada": "Cultura"
+        },
+        {
+            "pergunta": "Questão 5: Você Tem filhos?",
+            "respostaSelecionada": "2"
+        },
+        {
+            "pergunta": "Questão 6: Algo mais animado ou calmo?",
+            "respostaSelecionada": "Mais para calmo"
+        },
+        {
+            "pergunta": "Questão 7: Você pode comer carne?",
+            "respostaSelecionada": "Sim, sem restrições"
+        },
+        {
+            "pergunta": "Questão 8: Qual ambiente você prefere?",
+            "respostaSelecionada": "Cultural"
+        }
+    ]
 }
 ```
 
-**Exemplo de Resposta (Login):**
-
+**Resposta de exemplo:**
 ```json
 {
-  "message": "Login realizado com sucesso!",
-  "username": "usuario@email.com",
-  "authenticated": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "message": "Recomendações geradas com sucesso!",
+    "locaisRecomendados": [
+        {
+            "id": 1,
+            "nome": "Casa do Artesão",
+            "descricao": "Centro de artesanato local com peças típicas de Mato Grosso",
+            "endereco": "Praça do Arsenal, Centro Histórico, Cuiabá",
+            "telefone": "(65) 3624-9060",
+            "precoMedio": 0.0,
+            "avaliacaoMedia": 4.3,
+            "tags": ["cultura", "arte", "historia"],
+            "tempoMedioVisita": 60,
+            "pontuacaoRecomendacao": 8.2
+        }
+    ],
+    "totalLocais": 8,
+    "itinerarioGerado": "Itinerário criado com ID: 1. Duração estimada: 480 minutos. Custo estimado: R$ 45.00"
 }
 ```
 
-### Perfil do Usuário
+### 3. Gerenciar Itinerários
 
-| Método | Endpoint | Descrição |
-| :--- | :--- | :--- |
-| `POST` | `/api/perfil/criar` | Cria um perfil para o usuário autenticado. |
-| `PUT` | `/api/perfil/atualizar` | Atualiza o perfil do usuário. |
-| `GET` | `/api/perfil/meu-perfil` | Retorna o perfil do usuário autenticado. |
+```bash
+# Listar itinerários de um usuário
+GET /api/itinerarios/usuario/1
 
-**Valores Aceitos:**
+# Obter detalhes de um itinerário
+GET /api/itinerarios/1
 
-  - `estilo`: `AVENTURA`, `CULTURAL`, `RELAXANTE`, `GASTRONOMICO`, `NATUREZA`, `OUTRO`
-  - `contextoViagem`: `SOLO`, `PARCEIRO`, `FAMILIA_COM_CRIANCAS`, `FAMILIA_SEM_CRIANCAS`, `AMIGOS`
+# Marcar item como visitado
+PUT /api/itinerarios/item/1/marcar-visitado
 
-### Atrações Turísticas
-
-| Método | Endpoint | Descrição |
-| :--- | :--- | :--- |
-| `POST` | `/api/atracoes/criar` | Cria uma nova atração. |
-| `GET` | `/api/atracoes/cidade/{cidade}` | Lista todas as atrações de uma cidade. |
-| `GET` | `/api/atracoes/cidade/{cidade}/categoria/{categoria}` | Lista atrações por cidade e categoria. |
-| `GET` | `/api/atracoes/{atracaoId}` | Busca uma atração específica por ID. |
-| `DELETE` | `/api/atracoes/{atracaoId}` | Remove uma atração. |
-
-**Valores Aceitos:**
-
-  - `categoria`: `AVENTURA`, `CULTURAL`, `RELAXANTE`, `GASTRONOMICO`, `NATUREZA`
-  - `ambiente`: `INTERNO`, `EXTERNO`
-
-### Eventos
-
-| Método | Endpoint | Descrição |
-| :--- | :--- | :--- |
-| `POST` | `/api/eventos/criar` | Cria um novo evento. |
-| `GET` | `/api/eventos/cidade/{cidade}` | Lista todos os eventos de uma cidade. |
-| `GET` | `/api/eventos/{eventoId}` | Busca um evento específico por ID. |
-| `DELETE` | `/api/eventos/{eventoId}` | Remove um evento. |
-
-### Roteiros Personalizados
-
-| Método | Endpoint | Descrição |
-| :--- | :--- | :--- |
-| `POST` | `/api/roteiros/criar` | Cria um novo roteiro com base nas preferências do usuário. |
-| `GET` | `/api/roteiros/meus-roteiros` | Lista todos os roteiros do usuário autenticado. |
-| `GET` | `/api/roteiros/{roteiroId}` | Busca um roteiro específico com detalhes completos. |
-| `DELETE` | `/api/roteiros/{roteiroId}` | Remove um roteiro do usuário. |
-
-**Exemplo de Requisição (Criar Roteiro):**
-
-```json
-{
-  "cidade": "Salvador",
-  "tempoDisponivel": "DOIS_DIAS",
-  "horarioPreferido": "MANHA",
-  "orcamento": 500.00,
-  "modoTransporte": "TRANSPORTE_PUBLICO",
-  "preferenciaAmbiente": "AMBOS",
-  "incluirEventosSazonais": true
-}
+# Obter estatísticas
+GET /api/itinerarios/estatisticas
 ```
 
-**Valores Aceitos:**
+### 4. Explorar Locais
 
-  - `tempoDisponivel`: `MEIO_DIA`, `UM_DIA`, `DOIS_DIAS`, `TRES_DIAS`, `MAIS_DE_TRES_DIAS`
-  - `horarioPreferido`: `MANHA`, `TARDE`, `NOITE`
-  - `modoTransporte`: `CAMINHANDO`, `TRANSPORTE_PUBLICO`, `CARRO`, `CARONA`, `OUTRO`
-  - `preferenciaAmbiente`: `INTERNO`, `EXTERNO`, `AMBOS`
+```bash
+# Listar todos os locais
+GET /api/locais
 
------
+# Buscar por nome
+GET /api/locais/buscar?nome=Pantanal
 
-## Códigos de Status HTTP
+# Buscar por tag
+GET /api/locais/tag/cultura
 
-  - `200 OK`: Requisição bem-sucedida.
-  - `201 Created`: Recurso criado com sucesso.
-  - `400 Bad Request`: Dados inválidos na requisição.
-  - `401 Unauthorized`: Token ausente ou inválido.
-  - `403 Forbidden`: Acesso negado ao recurso.
-  - `404 Not Found`: Recurso não encontrado.
-  - `500 Internal Server Error`: Erro interno do servidor.
+# Locais para família
+GET /api/locais/familia
 
------
+# Locais vegetarianos
+GET /api/locais/vegetariano
 
-## Fluxo de Uso Recomendado
+# Por faixa de preço
+GET /api/locais/preco?precoMin=0&precoMax=50
 
-1.  **Registrar usuário:** `POST /api/auth/register`
-2.  **Fazer login:** `POST /api/auth/login` para obter o token JWT.
-3.  **Criar perfil:** `POST /api/perfil/criar` para definir suas preferências.
-4.  **Criar roteiro:** `POST /api/roteiros/criar` para que o sistema gere sugestões.
-5.  **Visualizar roteiro:** `GET /api/roteiros/{id}` para ver as atrações e eventos sugeridos.
+# Por avaliação
+GET /api/locais/avaliacao?avaliacaoMinima=4.0
 
------
+# Locais próximos
+GET /api/locais/proximos?latitude=-15.601&longitude=-56.098&distanciaKm=5
+```
+
+## Filtros Inteligentes Implementados
+
+### 1. Filtro de Família
+- **Se tem filhos**: Evita ambientes noturnos
+- **Se tem filhos**: Prioriza locais adequados para crianças
+- **Exceções**: Permite shopping, natureza, parques mesmo sem marcação específica
+
+### 2. Filtro Alimentar
+- **Se vegetariano/vegano**: Filtra restaurantes sem opções vegetarianas
+- **Aplica apenas**: Em locais com tags alimentares (churrasco, brasileira, etc.)
+
+### 3. Sistema de Tags
+
+O sistema utiliza 20 tags principais:
+
+| Categoria | Tags |
+|-----------|------|
+| **Interesse** | cultura, natureza, esporte, arte, historia |
+| **Ambiente** | noturno, bar, museu, shopping, familia |
+| **Atividade** | parque de diversoes, agua, animal, fitness |
+| **Gastronomia** | churrasco, brasileira, japonesa, italiana, vegana, fast food |
+
+## Locais Incluídos (100 locais)
+
+### Exemplos por Categoria:
+
+**Cultura (5 locais)**
+- Casa do Artesão
+- Museu da Pedra  
+- Centro Geodésico da América do Sul
+- Teatro de Arena
+- Biblioteca Estevão de Mendonça
+
+**Natureza (5 locais)**
+- Arena Pantanal
+- Parque Tia Nair
+- Parque Zé Bolo Flô
+- Jardim Botânico de Cuiabá
+- Parque da Família
+
+**Churrasco (5 locais)**
+- Churrascaria Pantanal
+- Portal do Pantanal
+- Espeto de Ouro
+- Churrascaria do Gaúcho
+- Tradição Gaúcha
+
+*E mais 85 locais em 17 outras categorias...*
 
 ## Algoritmo de Recomendação
 
-O sistema utiliza um algoritmo inteligente que considera as seguintes variáveis para gerar os roteiros:
+### Lógica de Pontuação:
+1. **Avaliação do local** × 2
+2. **Número de tags** × 0.5
+3. **Fator aleatório** para variedade
+4. **Ordenação** por pontuação decrescente
+5. **Limite** de 10 recomendações
 
-  - **Perfil do usuário:** Estilo de viagem e contexto.
-  - **Orçamento disponível:** Filtra atrações e eventos dentro do orçamento.
-  - **Tempo disponível:** Ajusta a quantidade de atividades.
-  - **Preferências de ambiente:** Prioriza locais internos ou externos.
-  - **Horário preferido:** Sugere atividades para manhã, tarde ou noite.
-  - **Modo de transporte:** Influencia a distância entre as atrações sugeridas.
+### Integração Externa:
+- Preparado para integrar com algoritmo externo via POST
+- URL configurável: `http://algoritmo-service:8080/api/recomendar`
+- Fallback para algoritmo local em caso de erro
 
------
+## Configuração de Desenvolvimento
 
-## Configuração Docker
+### Pré-requisitos:
+- Java 21
+- Docker & Docker Compose
+- Maven 3.9+
 
-Para rodar a aplicação localmente com Docker, utilize o comando:
+### Executar Sistema:
 
-`docker-compose up -d`
+```bash
+# 1. Subir banco de dados
+docker-compose up db -d
 
-A API estará disponível em `http://localhost:8080`.
+# 2. Executar aplicação Spring Boot
+./mvnw spring-boot:run
 
------
+# 3. Ou usar Docker completo
+docker-compose up --build
+```
 
-## Banco de Dados
+### URLs Importantes:
+- **API**: http://localhost:8080
+- **Swagger**: http://localhost:8080/swagger-ui.html
+- **Database**: localhost:5432 (admin/admin123)
 
-O sistema utiliza **PostgreSQL** com as seguintes tabelas principais:
+## Configurações do Banco
 
-  - `app_user`: Usuários do sistema.
-  - `perfil_usuario`: Perfis e preferências de viagem.
-  - `atracao_turistica`: Atrações disponíveis.
-  - `evento`: Eventos sazonais.
-  - `roteiro`: Roteiros criados pelos usuários.
-  - `roteiro_atracao_turistica`: Tabela de relacionamento entre roteiros e atrações.
-  - `roteiro_evento`: Tabela de relacionamento entre roteiros e eventos.
-  - `notificacao`: Notificações do sistema.
+```sql
+-- Executar após subir o sistema para popular dados
+-- O script SQL com 100 locais está incluído no projeto
+```
+
+## Próximos Passos
+
+1. **Algoritmo Externo**: Integrar com serviço de ML real
+2. **Geolocalização**: Melhorar cálculos de distância
+3. **Avaliações**: Sistema de feedback dos usuários
+4. **Notificações**: Lembretes de itinerários
+5. **Compartilhamento**: Permitir compartilhar itinerários
+
+## Endpoints Swagger
+
+Acesse `/swagger-ui.html` para documentação interativa completa de todos os endpoints.
+
+## Estrutura de Arquivos Criados
+
+```
+src/main/java/br/com/Turismo_40/
+├── Entity/
+│   ├── Local/
+│   │   ├── Model/Local.java
+│   │   ├── Repository/LocalRepository.java
+│   │   └── Controller/LocalController.java
+│   ├── Questionario/
+│   │   ├── Dto/
+│   │   ├── Service/QuestionarioService.java
+│   │   └── Controller/QuestionarioController.java
+│   └── Itinerario/
+│       ├── Model/
+│       ├── Repository/
+│       ├── Service/ItinerarioService.java
+│       └── Controller/ItinerarioController.java
+└── Config/
+    └── RestTemplateConfig.java
+```
+
+## Contribuindo
+
+1. Clone o repositório
+2. Crie uma branch para sua feature
+3. Siga os padrões de código existentes
+4. Adicione testes se necessário
+5. Faça pull request
+
+---
+
+**Desenvolvido para o sistema de Turismo 4.0 - Cuiabá/MT**

@@ -12,7 +12,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -107,55 +106,6 @@ public class AppUserController {
         }
     }
 
-    // Endpoint para logout de usuários
-    @PostMapping("/logout")
-    public ResponseEntity<?> logoutUser() {
-        // Limpa o contexto de segurança, encerrando a sessão do usuário no servidor
-        // Nota: Em APIs stateless com JWT, o cliente deve descartar o token localmente
-        SecurityContextHolder.clearContext();
-        
-        // Prepara a resposta de logout
-        AppUserResponse response = new AppUserResponse();
-        response.setMessage("Logout realizado com sucesso.");
-        
-        // Retorna resposta com status 200 (OK)
-        return ResponseEntity.ok(response);
-    }
-
-    // Endpoint para obter o perfil do usuário autenticado
-    @GetMapping("/profile")
-    public ResponseEntity<?> getUserProfile() {
-        // Obtém o objeto de autenticação do contexto de segurança
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        // Verifica se o usuário está autenticado e não é anônimo
-        if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal().equals("anonymousUser")) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Usuário não autenticado.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-        }
-        
-        // Obtém o nome de usuário do contexto de autenticação
-        String username = authentication.getName();
-        // Busca o usuário no serviço com base no nome de usuário
-        AppUser user = userService.findByUsername(username).orElse(null);
-        
-        // Verifica se o usuário foi encontrado
-        if (user == null) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Usuário não encontrado.");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-        }
-        
-        // Prepara a resposta com os dados do perfil do usuário
-        AppUserResponse response = new AppUserResponse();
-        response.setId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setMessage("Perfil do usuário recuperado com sucesso.");
-        
-        // Retorna resposta com status 200 (OK)
-        return ResponseEntity.ok(response);
-    }
 }
 
 // Explicação:

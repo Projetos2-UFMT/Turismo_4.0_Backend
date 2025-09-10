@@ -35,19 +35,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Rotas públicas - autenticação e Swagger
                 .requestMatchers("/api/auth/register", "/api/auth/login", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                
-                // Rotas autenticadas - perfil e usuário
-                .requestMatchers("/api/auth/profile", "/api/auth/logout").authenticated()
-                .requestMatchers("/api/perfil/**").authenticated()
-                
-                // Rotas autenticadas - entidades principais
-                .requestMatchers("/api/atracoes/**").authenticated()
-                .requestMatchers("/api/eventos/**").authenticated()
-                .requestMatchers("/api/roteiros/**").authenticated()
-                
-                // Rota de teste protegida
-                .requestMatchers("/protected").authenticated()
-                
+               
                 // Todas as demais requisições requerem autenticação
                 .anyRequest().authenticated()
             )

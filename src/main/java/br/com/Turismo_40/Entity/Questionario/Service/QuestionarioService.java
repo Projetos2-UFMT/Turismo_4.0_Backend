@@ -6,15 +6,21 @@ import br.com.Turismo_40.Entity.Local.Model.Local;
 import br.com.Turismo_40.Entity.Local.Repository.LocalRepository;
 import br.com.Turismo_40.Entity.Questionario.Dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class QuestionarioService {
-
 
     @Autowired
     private ItinerarioService itinerarioService;
@@ -26,59 +32,121 @@ public class QuestionarioService {
     private RestTemplate restTemplate;
 
     // URL do serviço de algoritmo de recomendação (ajustar conforme necessário)
-    private final String ALGORITMO_RECOMENDACAO_URL = "http://algoritmo-service:8080/api/recomendar";
+    private final String ALGORITMO_RECOMENDACAO_URL = "http://127.0.0.1:8081/api/recomendar";
 
     /**
      * Processa as respostas do questionário e retorna recomendações
      */
     public RecomendacaoResponse processarQuestionario(QuestionarioRequest request) {
-        
+
         // 1. Converter respostas em perfil do usuário
         PerfilUsuario perfil = criarPerfilUsuario(request.getRespostas());
-        
-        // 2. Aplicar filtros inteligentes
-        List<Local> locaisFiltrados = aplicarFiltros(perfil);
-        
-        // 3. Filtrar por tags de preferência
-        List<Local> locaisComTags = filtrarPorTags(locaisFiltrados, perfil.getTagsPreferencias());
-        
+
+        // Log para verificar as tags geradas
+        System.out.println("Tags de preferência do usuário: " + perfil.getTagsPreferencias());
+
+        // 2. Usar o método findByTagsIn para buscar locais que já têm as tags do perfil
+        List<Local> locaisComTags = localRepository.findByTagsIn(perfil.getTagsPreferencias());
+
+        // Log do resultado da busca inicial
+        System.out.println("Número de locais encontrados com as tags: " + locaisComTags.size());
+
+        // 3. Aplicar filtros mais finos (em memória)
+        List<Local> locaisFiltrados = locaisComTags.stream().filter(local -> {
+            // Se tem filhos pequenos, evitar ambientes noturnos
+            if (perfil.isEvitarAmbienteNoturno() && local.getAmbienteNoturno() != null && local.getAmbienteNoturno()) {
+                return false;
+            }
+
+            // Se é vegetariano/vegano e é restaurante, verificar opções
+            if (perfil.isPrecisaOpcoesVegetarianas() &&
+                contemTags(local.getTags(), Arrays.asList("churrasco", "brasileira", "japonesa", "italiana", "fast food")) &&
+                (local.getOpcoesVegetarianas() == null || !local.getOpcoesVegetarianas())) {
+                return false;
+            }
+
+            return true;
+        }).collect(Collectors.toList());
+
+        // Log do resultado da filtragem final
+        System.out.println("Número de locais após o filtro final: " + locaisFiltrados.size());
+
         // 4. Enviar para algoritmo de recomendação
-        List<LocalRecomendado> locaisRecomendados = enviarParaAlgoritmo(locaisComTags, perfil);
+        List<LocalRecomendado> locaisRecomendados = enviarParaAlgoritmo(locaisFiltrados, perfil);
+
         
+
         // 5. Criar itinerário no banco de dados
         Itinerario itinerarioCriado = null;
         if (request.getUsuarioId() != null && !locaisRecomendados.isEmpty()) {
             try {
                 itinerarioCriado = itinerarioService.criarItinerario(
-                    request.getUsuarioId(), 
-                    locaisRecomendados, 
-                    perfil, 
-                    "Roteiro Personalizado - " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    request.getUsuarioId(),
+                    locaisRecomendados,
+                    perfil,
+                    "Roteiro Personalizado - " + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
                 );
+
             } catch (Exception e) {
-                // Log do erro, mas continue com a resposta
                 System.err.println("Erro ao criar itinerário: " + e.getMessage());
             }
         }
-        
+
         // 6. Criar resposta
         RecomendacaoResponse response = new RecomendacaoResponse();
         response.setMessage("Recomendações geradas com sucesso!");
         response.setLocaisRecomendados(locaisRecomendados);
         response.setTotalLocais(locaisRecomendados.size());
-        
+
         if (itinerarioCriado != null) {
-            response.setItinerarioGerado("Itinerário criado com ID: " + itinerarioCriado.getId() + 
-                                       ". Duração estimada: " + itinerarioCriado.getDuracaoEstimada() + " minutos. " +
-                                       "Custo estimado: R$ " + String.format("%.2f", itinerarioCriado.getCustoEstimado()));
+            response.setItinerarioGerado("Itinerário criado com ID: " + itinerarioCriado.getId() +
+                                         ". Duração estimada: " + itinerarioCriado.getDuracaoEstimada() + " minutos. " +
+                                         "Custo estimado: R$ " + String.format("%.2f", itinerarioCriado.getCustoEstimado()));
         }
-        
+
         return response;
     }
 
+    // ... (restante dos métodos auxiliares, como criarPerfilUsuario, etc.)
+
     /**
-     * Converte as respostas em um perfil estruturado do usuário
+     * Envia os locais filtrados para o algoritmo de recomendação via HTTP.
      */
+    private List<LocalRecomendado> enviarParaAlgoritmo(List<Local> locais, PerfilUsuario perfil) {
+        try {
+            // Preparar os dados para o corpo da requisição
+            Map<String, Object> dadosAlgoritmo = new HashMap<>();
+            dadosAlgoritmo.put("locais", locais);
+            dadosAlgoritmo.put("perfil", perfil);
+
+            // Definir os headers da requisição
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // Montar a entidade da requisição (corpo + headers)
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(dadosAlgoritmo, headers);
+
+            // Definir o tipo de retorno esperado, pois é uma lista de objetos
+            ParameterizedTypeReference<List<LocalRecomendado>> responseType =
+                new ParameterizedTypeReference<List<LocalRecomendado>>() {};
+
+            // Enviar a requisição POST para o microserviço Python
+            ResponseEntity<List<LocalRecomendado>> responseEntity = restTemplate.exchange(
+                ALGORITMO_RECOMENDACAO_URL,
+                HttpMethod.POST,
+                requestEntity,
+                responseType
+            );
+
+            // Retornar a lista de locais recomendados do corpo da resposta
+            return responseEntity.getBody();
+
+        } catch (Exception e) {
+            System.err.println("Erro ao chamar o serviço de recomendação: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     private PerfilUsuario criarPerfilUsuario(List<RespostaQuestionario> respostas) {
         PerfilUsuario perfil = new PerfilUsuario();
         List<String> tags = new ArrayList<>();
@@ -139,121 +207,12 @@ public class QuestionarioService {
         return perfil;
     }
 
-    /**
-     * Aplica filtros inteligentes baseados no perfil do usuário
-     */
-    private List<Local> aplicarFiltros(PerfilUsuario perfil) {
-        List<Local> todosLocais = localRepository.findAllByAtivoTrue();
-        
-        return todosLocais.stream().filter(local -> {
-            
-            // Se tem filhos pequenos, evitar ambientes noturnos
-            if (perfil.isEvitarAmbienteNoturno() && local.getAmbienteNoturno() != null && local.getAmbienteNoturno()) {
-                return false;
-            }
-            
-            // Se tem filhos, priorizar locais adequados para crianças
-            if (perfil.isTemFilhos() && local.getAdequadoCriancas() != null && !local.getAdequadoCriancas()) {
-                // Permite alguns tipos específicos mesmo sem ser marcado como adequado para crianças
-                if (!contemTags(local.getTags(), Arrays.asList("shopping", "natureza", "parque de diversoes"))) {
-                    return false;
-                }
-            }
-            
-            // Se é vegetariano/vegano e é restaurante, verificar opções
-            if (perfil.isPrecisaOpcoesVegetarianas() && 
-                contemTags(local.getTags(), Arrays.asList("churrasco", "brasileira", "japonesa", "italiana", "fast food")) &&
-                (local.getOpcoesVegetarianas() == null || !local.getOpcoesVegetarianas())) {
-                return false;
-            }
-            
-            return true;
-        }).collect(Collectors.toList());
+    private boolean contemTags(List<String> tagsLocal, List<String> tagsVerificar) {
+        if (tagsLocal == null || tagsLocal.isEmpty()) return false;
+        return tagsLocal.stream().anyMatch(tagsVerificar::contains);
     }
-
-    /**
-     * Filtra locais pelas tags de preferência do usuário
-     */
-    private List<Local> filtrarPorTags(List<Local> locais, List<String> tagsPreferencia) {
-        if (tagsPreferencia.isEmpty()) {
-            return locais;
-        }
-
-        return locais.stream()
-                .filter(local -> local.getTags() != null && 
-                        local.getTags().stream().anyMatch(tagsPreferencia::contains))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Envia os locais filtrados para o algoritmo de recomendação
-     */
-    private List<LocalRecomendado> enviarParaAlgoritmo(List<Local> locais, PerfilUsuario perfil) {
-        try {
-            // Preparar dados para envio
-            Map<String, Object> dadosAlgoritmo = new HashMap<>();
-            dadosAlgoritmo.put("locais", locais);
-            dadosAlgoritmo.put("perfil", perfil);
-            
-            // Enviar requisição POST para o algoritmo
-            // ResponseEntity<List<LocalRecomendado>> response = restTemplate.postForEntity(
-            //     ALGORITMO_RECOMENDACAO_URL, 
-            //     dadosAlgoritmo, 
-            //     List.class
-            // );
-            
-            // Por enquanto, simular a resposta do algoritmo
-            return simularAlgoritmoRecomendacao(locais, perfil);
-            
-        } catch (Exception e) {
-            // Em caso de erro, usar algoritmo local simples
-            return simularAlgoritmoRecomendacao(locais, perfil);
-        }
-    }
-
-    /**
-     * Simulação do algoritmo de recomendação (enquanto o serviço externo não está disponível)
-     */
-    private List<LocalRecomendado> simularAlgoritmoRecomendacao(List<Local> locais, PerfilUsuario perfil) {
-        return locais.stream()
-                .map(this::converterParaLocalRecomendado)
-                .sorted((a, b) -> Double.compare(b.getPontuacaoRecomendacao(), a.getPontuacaoRecomendacao()))
-                .limit(10) // Limitar a 10 recomendações
-                .collect(Collectors.toList());
-    }
-
-    private LocalRecomendado converterParaLocalRecomendado(Local local) {
-        LocalRecomendado recomendado = new LocalRecomendado();
-        recomendado.setId(local.getId());
-        recomendado.setNome(local.getNome());
-        recomendado.setDescricao(local.getDescricao());
-        recomendado.setEndereco(local.getEndereco());
-        recomendado.setTelefone(local.getTelefone());
-        recomendado.setPrecoMedio(local.getPrecoMedio());
-        recomendado.setAvaliacaoMedia(local.getAvaliacaoMedia());
-        recomendado.setUrlImagem(local.getUrlImagem());
-        recomendado.setTags(local.getTags());
-        recomendado.setTempoMedioVisita(local.getTempoMedioVisita());
-        recomendado.setPontuacaoRecomendacao(calcularPontuacao(local));
-        return recomendado;
-    }
-
-    private Double calcularPontuacao(Local local) {
-        // Algoritmo simples de pontuação
-        double pontuacao = 0.0;
-        
-        if (local.getAvaliacaoMedia() != null) {
-            pontuacao += local.getAvaliacaoMedia() * 2;
-        }
-        
-        if (local.getTags() != null) {
-            pontuacao += local.getTags().size() * 0.5;
-        }
-        
-        return pontuacao + Math.random() * 2; // Adicionar um pouco de aleatoriedade
-    }
-
-    // Métodos auxiliares para adicionar tags baseadas nas respostas
+    
+    // ... (restante dos métodos auxiliares)
     private void adicionarTagComida(List<String> tags, String resposta) {
         switch (resposta.toLowerCase()) {
             case "brasileira": tags.add("brasileira"); break;
@@ -345,10 +304,5 @@ public class QuestionarioService {
             default:
                 perfil.setTemRestricaoAlimentar(false);
         }
-    }
-
-    private boolean contemTags(List<String> tagsLocal, List<String> tagsVerificar) {
-        if (tagsLocal == null || tagsLocal.isEmpty()) return false;
-        return tagsLocal.stream().anyMatch(tagsVerificar::contains);
     }
 }

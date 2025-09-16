@@ -23,6 +23,6 @@ public class LocalRecomendado {
     private String urlImagem;
     private List<String> tags;
     private Integer tempoMedioVisita;
-    private Double pontuacaoRecomendacao; // Score do algoritmo
+    private Double pontuacaoRecomendacao;
 }
 

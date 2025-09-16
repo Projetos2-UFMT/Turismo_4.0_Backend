@@ -280,32 +280,51 @@ public class QuestionarioService {
     /**
      * Envia os locais filtrados para o algoritmo de recomendação via HTTP.
      */
-    private List<LocalRecomendado> enviarParaAlgoritmo(List<Local> locais, PerfilUsuario perfil) {
-        try {
-            Map<String, Object> dadosAlgoritmo = new HashMap<>();
-            dadosAlgoritmo.put("locais", locais);
-            dadosAlgoritmo.put("perfil", perfil);
+private List<LocalRecomendado> enviarParaAlgoritmo(List<Local> locais, PerfilUsuario perfil) {
+    try {
+        // Monta a lista de mapas para garantir os campos esperados pelo Python
+        List<Map<String, Object>> locaisParaAlgoritmo = locais.stream().map(local -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", local.getId());
+            map.put("nome", local.getNome());
+            map.put("descricao", local.getDescricao());
+            map.put("tags", local.getTags());
+            map.put("avaliacaoMedia", local.getAvaliacaoMedia());
+            map.put("precoMedio", local.getPrecoMedio());
+            map.put("adequadoCriancas", local.getAdequadoCriancas());
+            map.put("ambienteNoturno", local.getAmbienteNoturno());
+            map.put("latitude", local.getLatitude());
+            map.put("longitude", local.getLongitude());
+            map.put("horarioFuncionamento", local.getHorarioFuncionamento());
+            map.put("tempoMedioVisita", local.getTempoMedioVisita() != null ? local.getTempoMedioVisita() : 60);
+            map.put("tempoDeslocamento", 15); // valor fixo, ajuste se quiser calcular
+            return map;
+        }).collect(Collectors.toList());
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+        Map<String, Object> dadosAlgoritmo = new HashMap<>();
+        dadosAlgoritmo.put("locais", locaisParaAlgoritmo);
+        dadosAlgoritmo.put("perfil", perfil);
 
-            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(dadosAlgoritmo, headers);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-            ParameterizedTypeReference<List<LocalRecomendado>> responseType =
-                new ParameterizedTypeReference<List<LocalRecomendado>>() {};
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(dadosAlgoritmo, headers);
 
-            ResponseEntity<List<LocalRecomendado>> responseEntity = restTemplate.exchange(
-                ALGORITMO_RECOMENDACAO_URL,
-                HttpMethod.POST,
-                requestEntity,
-                responseType
-            );
+        ParameterizedTypeReference<List<LocalRecomendado>> responseType =
+            new ParameterizedTypeReference<List<LocalRecomendado>>() {};
 
-            return responseEntity.getBody();
+        ResponseEntity<List<LocalRecomendado>> responseEntity = restTemplate.exchange(
+            ALGORITMO_RECOMENDACAO_URL,
+            HttpMethod.POST,
+            requestEntity,
+            responseType
+        );
 
-        } catch (Exception e) {
-            System.err.println("Erro ao chamar o serviço de recomendação: " + e.getMessage());
-            return Collections.emptyList();
-        }
+        return responseEntity.getBody();
+
+    } catch (Exception e) {
+        System.err.println("Erro ao chamar o serviço de recomendação: " + e.getMessage());
+        return Collections.emptyList();
     }
+}
 }

@@ -17,7 +17,7 @@ public class QuestionarioRequest {
     private Integer horarioFinal;
     private Localizacao localizacao;
     private List<Integer> respostas;
-    private Long usuarioId; // Adicione este campo se precisar identificar o usuário
+    private Long usuarioId;
 
     @Getter
     @Setter

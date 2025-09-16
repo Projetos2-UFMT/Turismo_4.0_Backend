@@ -13,27 +13,33 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PerfilUsuario {
-    
+
     // Preferências alimentares
     private String tipoComida; // "Brasileira", "Churrasco", "Japonesa", etc.
     private boolean temRestricaoAlimentar;
     private boolean vegetariano;
     private boolean vegano;
-    
+
     // Situação familiar
     private boolean temFilhos;
     private int quantidadeFilhos;
-    
+
     // Preferências de atividade
     private String tipoEvento; // "Parque de diversões", "Bar", "Shopping", etc.
     private String interesseCultural; // "Museu", "Arte", "História", etc.
     private String categoriaInteresse; // "Cultura", "Natureza", "Esporte", etc.
     private String nivelAnimacao; // "Animado", "Calmo", etc.
     private String ambientePreferido; // "Natureza", "Urbano", "Histórico", etc.
-    
+
+    // Localização e horários
+    private Double latitude;
+    private Double longitude;
+    private Integer horarioInicio;
+    private Integer horarioFinal;
+
     // Tags derivadas das respostas
     private List<String> tagsPreferencias;
-    
+
     // Filtros aplicados
     private boolean adequadoParaCriancas;
     private boolean evitarAmbienteNoturno;

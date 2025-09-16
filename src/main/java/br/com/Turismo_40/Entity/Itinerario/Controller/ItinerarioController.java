@@ -92,16 +92,6 @@ public class ItinerarioController {
     public ResponseEntity<?> excluirItinerario(@PathVariable Long itinerarioId) {
         try {
             // Obter usuário autenticado
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            
-            // Aqui você precisaria buscar o ID do usuário pelo username
-            // Por simplificação, vou assumir que o usuário ID é passado como parâmetro
-            // Em uma implementação real, você buscaria o usuário pelo username
-            
-            // Para este exemplo, vou simular que o usuário pode excluir qualquer itinerário
-            // itinerarioService.excluirItinerario(itinerarioId, usuarioId);
-            
             Map<String, String> response = new HashMap<>();
             response.put("message", "Funcionalidade de exclusão será implementada com controle de usuário");
             return ResponseEntity.ok(response);

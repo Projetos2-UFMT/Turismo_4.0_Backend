@@ -13,6 +13,18 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QuestionarioRequest {
-    private List<RespostaQuestionario> respostas;
-    private Long usuarioId; // ID do usuário que respondeu
+    private Integer horarioInicio;
+    private Integer horarioFinal;
+    private Localizacao localizacao;
+    private List<Integer> respostas;
+    private Long usuarioId; // Adicione este campo se precisar identificar o usuário
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Localizacao {
+        private Double latitude;
+        private Double longitude;
+    }
 }

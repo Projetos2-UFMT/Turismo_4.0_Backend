@@ -40,11 +40,11 @@ public class ItinerarioService {
     /**
      * Cria um itinerário baseado nas recomendações geradas
      */
-    public Itinerario criarItinerario(Long usuarioId, List<LocalRecomendado> locaisRecomendados, 
+    public Itinerario criarItinerario(Object usuarioId, List<LocalRecomendado> locaisRecomendados, 
                                      PerfilUsuario perfil, String titulo) {
         
         // Buscar o usuário
-        Optional<AppUser> userOpt = userRepository.findById(usuarioId);
+        Optional<AppUser> userOpt = userRepository.findById((Long) usuarioId);
         if (userOpt.isEmpty()) {
             throw new RuntimeException("Usuário não encontrado");
         }

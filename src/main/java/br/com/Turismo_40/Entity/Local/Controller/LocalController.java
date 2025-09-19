@@ -76,6 +76,24 @@ public class LocalController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
+    @PatchMapping("/{id}/imagem")
+    public ResponseEntity<?> atualizarImagem(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String urlImagem = body.get("urlImagem");
+        if (urlImagem == null || urlImagem.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "urlImagem é obrigatória"));
+        }
+
+        Optional<Local> localOpt = localRepository.findById(id);
+        if (localOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "Local não encontrado"));
+        }
+
+        Local local = localOpt.get();
+        local.setUrlImagem(urlImagem);
+        localRepository.save(local);
+
+        return ResponseEntity.ok(Map.of("message", "Imagem atualizada com sucesso", "id", id, "urlImagem", urlImagem));
+    }
 
     @GetMapping("/buscar")
     @Operation(summary = "Buscar locais por nome", 

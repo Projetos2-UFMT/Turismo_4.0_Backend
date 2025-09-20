@@ -80,4 +80,14 @@ public class AppUserService implements UserDetailsService {
         // Verifica se a senha fornecida corresponde à senha criptografada
         return passwordEncoder.matches(rawPassword, user.get().getPassword());
     }
+
+    public AppUser updatePassword(String currentUsername, String password) {
+        Optional<AppUser> userOpt = userRepository.findByUsername(currentUsername);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("Usuário não encontrado: " + currentUsername);
+        }
+        AppUser user = userOpt.get();
+        user.setPassword(passwordEncoder.encode(password));
+        return userRepository.save(user);
+    }
 }
